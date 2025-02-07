@@ -1,10 +1,8 @@
-import 'dart:convert';
-//import 'dart:js_interop';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_shopping/Urun.dart';
+import 'package:flutter_shopping/urunListesiKaydet.dart';
+import 'package:flutter_shopping/urunListesiYukle.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class Mainpage extends StatefulWidget {
   @override
@@ -37,6 +35,7 @@ class _MainpageState extends State<Mainpage> {
       child: Scaffold(
         body: Stack(
           children: [
+            /// Arka plan
             Opacity(
               opacity: 0.3,
               child: Container(
@@ -50,6 +49,7 @@ class _MainpageState extends State<Mainpage> {
             ),
             Column(
               children: [
+                /// Ürün ekle ve listeyi temizle butonları
                 Container(
                   padding: EdgeInsets.all(8),
                   margin: EdgeInsets.all(8),
@@ -126,7 +126,7 @@ class _MainpageState extends State<Mainpage> {
                     ],
                   ),
                 ),
-
+                /// Listeleme Ekranı
                 Expanded(
                   child: ListView.builder(
                     itemCount: urunListesi.length,
@@ -141,6 +141,8 @@ class _MainpageState extends State<Mainpage> {
     );
   }
 
+
+  /// Liste ekranı widget yapısı
   Widget urunListeleme(
       BuildContext context,
       int index,
@@ -207,6 +209,7 @@ class _MainpageState extends State<Mainpage> {
                     GestureDetector(
                       onTap: (){
                         setState(() {
+                          /// Urun alindi/geri al buton fonksiyonu
                           urunListesi[index].urun_alindi = !urunListesi[index].urun_alindi;
                           urunListesiKaydet(urunListesi);
                         });
@@ -248,6 +251,7 @@ class _MainpageState extends State<Mainpage> {
     );
   }
 
+  /// Urun ekleme dialogu
   Future<void> urunEkleDialog(
     BuildContext context,
     {Urun? guncellenecekUrun, int? index}
@@ -439,31 +443,5 @@ class _MainpageState extends State<Mainpage> {
       },
     );
   }
-
-  Future<void> urunListesiKaydet(List<Urun> urunListesi) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Listemizi JSON formatina cevirelim
-    List<String> jsonList = urunListesi.map(
-            (item) => (jsonEncode(item.toJson()))
-    ).toList();
-
-    // Cevirdigimiz formati kaydedelim
-    await prefs.setStringList("urunListesi", jsonList);
-  }
-
-  Future<List<Urun>> urunListesiYukle() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    List<String>? jsonList = prefs.getStringList("urunListesi");
-
-    if(jsonList == null){
-      return [];
-    }
-
-    return jsonList.map((item) => Urun.fromJSON(jsonDecode(item))).toList();
-  }
-
-
 
 }
