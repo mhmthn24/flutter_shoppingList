@@ -1,6 +1,10 @@
+import 'dart:convert';
+//import 'dart:js_interop';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_shopping/Urun.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Mainpage extends StatefulWidget {
   @override
@@ -11,15 +15,21 @@ class _MainpageState extends State<Mainpage> {
   /*
     Ana Listeleme Ekranı
    */
-  List<Urun> urunListesi = [
-    Urun(urun_id: 1, urun_adi: "Elma", urun_birim: "Kilogram", urun_adet: 5),
-    Urun(urun_id: 2, urun_adi: "Armut", urun_birim: "Paket", urun_adet: 1),
-    Urun(urun_id: 3, urun_adi: "Domates", urun_birim: "Kilogram", urun_adet: 2),
-    Urun(urun_id: 4, urun_adi: "Muz", urun_birim: "Adet", urun_adet: 3),
-  ];
 
-  List<String> birimListesi = ["Kilogram", "Adet", "Paket", "Litre"];
+  List<Urun> urunListesi = [];
+  final List<String> birimListesi = ["Kilogram", "Adet", "Paket", "Litre"];
   String birim = "Kilogram";
+
+  @override
+  void initState(){
+    super.initState();
+    //clearSharedPreferences();
+    urunListesiYukle().then((list){
+      setState(() {
+        urunListesi = list;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +97,7 @@ class _MainpageState extends State<Mainpage> {
                         onLongPress: (){
                           setState(() {
                             urunListesi.clear();
+                            urunListesiKaydet(urunListesi);
                           });
                         },
                         style: ElevatedButton.styleFrom(
@@ -197,6 +208,7 @@ class _MainpageState extends State<Mainpage> {
                       onTap: (){
                         setState(() {
                           urunListesi[index].urun_alindi = !urunListesi[index].urun_alindi;
+                          urunListesiKaydet(urunListesi);
                         });
                       },
                       child: Icon(
@@ -218,6 +230,7 @@ class _MainpageState extends State<Mainpage> {
                       onLongPress: (){
                         setState(() {
                           urunListesi.remove(urunListesi[index]);
+                          urunListesiKaydet(urunListesi);
                         });
                       },
                       child: Icon(
@@ -367,24 +380,37 @@ class _MainpageState extends State<Mainpage> {
                           child: ElevatedButton(
                             onPressed: (){
                               setState(() {
-                                Navigator.of(context).pop();
-
-                                if(guncellenecekUrun != null){
-                                  urunListesi[index!] = Urun(
-                                    urun_id: guncellenecekUrun.urun_id,
-                                    urun_adi: _controllerUrunAdi.text,
-                                    urun_birim: yerelBirim,
-                                    urun_adet: adetSayaci
+                                if (_controllerUrunAdi.text.isEmpty){
+                                  Fluttertoast.showToast(
+                                    msg: "Lütfen geçerli bir ürün adı giriniz",
+                                    toastLength: Toast.LENGTH_SHORT,
+                                    gravity: ToastGravity.BOTTOM,
+                                    backgroundColor: Color(0xFF002767),
+                                    textColor: Colors.white
                                   );
                                 }else{
-                                  Urun yeniUrun = Urun(
-                                    urun_id: urunListesi.length + 1,
-                                    urun_adi: _controllerUrunAdi.text,
-                                    urun_birim: yerelBirim,
-                                    urun_adet: adetSayaci
-                                  );
+                                  Navigator.of(context).pop();
 
-                                  urunListesi.add(yeniUrun);
+                                  if(guncellenecekUrun != null){
+                                    urunListesi[index!] = Urun(
+                                        urun_id: guncellenecekUrun.urun_id,
+                                        urun_adi: _controllerUrunAdi.text,
+                                        urun_birim: yerelBirim,
+                                        urun_adet: adetSayaci
+                                    );
+
+                                    urunListesiKaydet(urunListesi);
+                                  }else{
+                                    Urun yeniUrun = Urun(
+                                        urun_id: urunListesi.length + 1,
+                                        urun_adi: _controllerUrunAdi.text,
+                                        urun_birim: yerelBirim,
+                                        urun_adet: adetSayaci
+                                    );
+
+                                    urunListesi.add(yeniUrun);
+                                    urunListesiKaydet(urunListesi);
+                                  }
                                 }
 
                               });
@@ -413,4 +439,31 @@ class _MainpageState extends State<Mainpage> {
       },
     );
   }
+
+  Future<void> urunListesiKaydet(List<Urun> urunListesi) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Listemizi JSON formatina cevirelim
+    List<String> jsonList = urunListesi.map(
+            (item) => (jsonEncode(item.toJson()))
+    ).toList();
+
+    // Cevirdigimiz formati kaydedelim
+    await prefs.setStringList("urunListesi", jsonList);
+  }
+
+  Future<List<Urun>> urunListesiYukle() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    List<String>? jsonList = prefs.getStringList("urunListesi");
+
+    if(jsonList == null){
+      return [];
+    }
+
+    return jsonList.map((item) => Urun.fromJSON(jsonDecode(item))).toList();
+  }
+
+
+
 }
